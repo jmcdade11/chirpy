@@ -66,6 +66,9 @@ func main() {
 
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 
+	mux.HandleFunc("POST /api/revoke", apiCfg.handlerTokenRevoke)
+	mux.HandleFunc("POST /api/refresh", apiCfg.handlerTokenRefresh)
+
 	server := http.Server{
 		Handler: mux,
 		Addr:    ":" + port,

@@ -11,13 +11,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CreateJwt(userId int, tokenSecret string, expiresInSeconds int) (string, error) {
+func CreateJwt(userId int, tokenSecret string) (string, error) {
 	signingKey := []byte(tokenSecret)
 	issuedAt := time.Now().UTC()
+	expiresAt := issuedAt.Add(time.Hour * 1)
 	registeredClaims := &jwt.RegisteredClaims{
 		Issuer:    "chirpy",
 		IssuedAt:  jwt.NewNumericDate(issuedAt),
-		ExpiresAt: jwt.NewNumericDate(ValidateExpiresInSeconds(issuedAt, expiresInSeconds)),
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
 		Subject:   fmt.Sprintf("%d", userId),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, registeredClaims)
@@ -27,15 +28,6 @@ func CreateJwt(userId int, tokenSecret string, expiresInSeconds int) (string, er
 		return "", err
 	}
 	return ss, nil
-}
-
-func ValidateExpiresInSeconds(issuedAt time.Time, expiresInSeconds int) time.Time {
-
-	if expiresInSeconds < 1 || expiresInSeconds > 86400 {
-		return issuedAt.Add(24 * time.Hour)
-	}
-
-	return issuedAt.Add(time.Duration(expiresInSeconds) * time.Second)
 }
 
 func ValidateJwt(tokenString, tokenSecret string) (string, error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/jmcdade11/chirpy/internal/auth"
@@ -9,13 +10,13 @@ import (
 
 func (cfg *apiConfig) handlerLoginCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type Response struct {
 		User
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -39,9 +40,16 @@ func (cfg *apiConfig) handlerLoginCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	token, err := auth.CreateJwt(user.ID, cfg.jwtSecret, params.ExpiresInSeconds)
+	token, err := auth.CreateJwt(user.ID, cfg.jwtSecret)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT")
+		return
+	}
+
+	refreshToken, err := cfg.DB.CreateRefreshToken(user.ID)
+	if err != nil {
+		fmt.Printf("Error: CreateRefreshToken %s", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create refresh token")
 		return
 	}
 
@@ -50,6 +58,7 @@ func (cfg *apiConfig) handlerLoginCreate(w http.ResponseWriter, r *http.Request)
 			ID:    user.ID,
 			Email: user.Email,
 		},
-		Token: token,
+		Token:        token,
+		RefreshToken: refreshToken.Token,
 	})
 }
