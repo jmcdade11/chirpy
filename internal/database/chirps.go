@@ -3,8 +3,9 @@ package database
 import "sync"
 
 type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
+	ID       int    `json:"id"`
+	Body     string `json:"body"`
+	AuthorID int    `json:"author_id"`
 }
 
 // NewDB creates a new database connection
@@ -19,7 +20,7 @@ func NewDB(path string) (*DB, error) {
 }
 
 // CreateChirp creates a new chirp and saves it to disk
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, authorID int) (Chirp, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
@@ -28,8 +29,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	id := len(dbStructure.Chirps) + 1
 
 	chirp := Chirp{
-		ID:   id,
-		Body: body,
+		ID:       id,
+		Body:     body,
+		AuthorID: authorID,
 	}
 
 	dbStructure.Chirps[id] = chirp
@@ -52,4 +54,36 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		chirps = append(chirps, chirp)
 	}
 	return chirps, nil
+}
+
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+	for _, chirp := range dbStructure.Chirps {
+		if chirp.ID == id {
+			return chirp, nil
+		}
+	}
+	return Chirp{}, ErrNotExist
+}
+
+func (db *DB) DeleteChirp(id int) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	_, ok := dbStructure.Chirps[id]
+	if !ok {
+		return ErrNotExist
+	}
+
+	delete(dbStructure.Chirps, id)
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
